@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ثبت موقعیت JOULE</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#eef5f3;color:#163e39;font:17px/1.9 Tahoma,Arial,sans-serif}
+    main{max-width:540px;margin:7vh auto;padding:28px;background:white;border-radius:20px;box-shadow:0 10px 36px #173d3212}
+    h1{font-size:24px}p{color:#48615d}button{width:100%;border:0;border-radius:12px;padding:14px;font:inherit;color:white;background:#126d5d;cursor:pointer}
+    button:disabled{background:#aabbb8}#status{min-height:3em;padding-top:12px}small{color:#536b66}a{color:#126d5d}
+  </style>
+</head>
+<body><main>
+  <h1>موقعیت خانه برای JOULE</h1>
+  <p>این صفحه از گوشی اجازهٔ مکان می‌خواهد و پس از تأیید تو آن را به برد می‌دهد.</p>
+  <p>صفحه را باز نگه دار، گوشی را به وای‌فای خود برد وصل کن و سپس دکمهٔ زیر را بزن.</p>
+  <button id="locate">اجازه و دریافت مکان گوشی</button>
+  <p id="status" role="status" aria-live="polite"></p>
+  <button id="send" hidden>ارسال موقعیت به برد</button>
+  <small>موقعیت به سرور این صفحه فرستاده نمی‌شود. هنگام ارسال، به صفحهٔ محلی برد بازمی‌گردی.</small>
+</main><script>
+'use strict';
+const button=document.getElementById('locate'),send=document.getElementById('send'),status=document.getElementById('status');
+let fix=null;
+button.addEventListener('click',()=>{
+  if(!window.isSecureContext||!navigator.geolocation){status.textContent='مکان گوشی در این مرورگر در دسترس نیست؛ صفحه را با Safari یا Chrome باز کن.';return;}
+  button.disabled=true;status.textContent='در حال دریافت مکان؛ اگر گوشی پرسید، اجازه بده.';
+  navigator.geolocation.getCurrentPosition(position=>{
+    fix={latitude:position.coords.latitude,longitude:position.coords.longitude,accuracy:position.coords.accuracy,obtained:position.timestamp};
+    if(!Number.isFinite(fix.latitude)||!Number.isFinite(fix.longitude)||!Number.isFinite(fix.accuracy)){fix=null;status.textContent='مکان معتبر دریافت نشد.';button.disabled=false;return;}
+    status.textContent='مکان دریافت شد. اکنون ارسال به برد را بزن.';send.hidden=false;button.disabled=false;
+  },error=>{fix=null;send.hidden=true;button.disabled=false;status.textContent=error.code===1?'اجازهٔ مکان داده نشد؛ دسترسی مکان مرورگر را در تنظیمات گوشی فعال کن.':'مکان پیدا نشد؛ GPS گوشی را روشن و دوباره تلاش کن.';},
+  {enableHighAccuracy:true,maximumAge:0,timeout:25000});
+});
+send.addEventListener('click',()=>{
+  if(!fix||Date.now()-fix.obtained>60000){status.textContent='موقعیت قبلی قدیمی است؛ دوباره مکان را دریافت کن.';send.hidden=true;return;}
+  const hash=new URLSearchParams({joule:'location',latitude:String(fix.latitude),longitude:String(fix.longitude),accuracy:String(fix.accuracy),obtained:String(fix.obtained)});
+  window.location.assign('http://192.168.4.1/#'+hash.toString());
+});
+</script></body></html>
